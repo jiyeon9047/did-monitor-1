@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=1080"/>
+  <title>S-TECH DID 모니터</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      /* 브라우저 뷰포트 크기에 관계없이 1080×1920 기준으로 scale */
+      width: 1080px;
+      height: 1920px;
+    }
+
+    body {
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', '맑은 고딕', sans-serif;
+      transform-origin: top left;
+    }
+
+    .screen {
+      width: 1080px;
+      height: 1920px;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(175deg, #0f172a 0%, #1e293b 55%, #0f2027 100%);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 배경 장식 */
+    .deco { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; }
+    .deco-1 {
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(220,38,38,.12) 0%, transparent 65%);
+      top: -250px; right: -250px;
+    }
+    .deco-2 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(29,78,216,.10) 0%, transparent 65%);
+      bottom: 200px; left: -200px;
+    }
+    .screen > *:not(.deco) { position: relative; z-index: 1; }
+
+    /* ═══ 헤더 ═══ */
+    .header {
+      flex-shrink: 0;
+      padding: 52px 68px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .header-top { display: flex; align-items: center; justify-content: space-between; }
+
+    .logo-area  { display: flex; align-items: center; gap: 16px; }
+    .logo-bar   { width: 6px; height: 56px; background: linear-gradient(180deg,#ef4444,#dc2626); border-radius: 3px; }
+    .logo-text  { font-size: 2.5rem; font-weight: 900; color: #f1f5f9; letter-spacing: .14em; }
+    .logo-sub   { font-size: 1.1rem; font-weight: 400; color: #64748b; letter-spacing: .06em; margin-top: 4px; }
+
+    .datetime-area { text-align: right; }
+    .dt-date { font-size: 1.5rem; font-weight: 500; color: #94a3b8; letter-spacing: .04em; margin-bottom: 5px; }
+    .dt-time { font-size: 3.8rem; font-weight: 900; color: #f1f5f9; letter-spacing: .06em; font-variant-numeric: tabular-nums; line-height: 1; }
+
+    /* ═══ 환율 카드 ═══ */
+    .exrate-card {
+      background: linear-gradient(135deg, #1e293b 0%, #162032 100%);
+      border: 1px solid rgba(220,38,38,.35);
+      border-radius: 26px;
+      padding: 38px 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 0 0 1px rgba(220,38,38,.1), 0 8px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+      position: relative;
+      overflow: hidden;
+    }
+    .exrate-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(220,38,38,.5), transparent);
+    }
+
+    .exrate-left  { display: flex; align-items: center; gap: 22px; }
+    .exrate-flag  { font-size: 3.8rem; line-height: 1; }
+    .exrate-currency { font-size: 2.8rem; font-weight: 900; color: #f1f5f9; letter-spacing: .08em; }
+    .exrate-pair     { font-size: 1.3rem; font-weight: 500; color: #64748b; letter-spacing: .05em; margin-top: 5px; }
+
+    .exrate-right { text-align: right; }
+    .exrate-value {
+      font-size: 6rem; font-weight: 900; color: #ef4444;
+      font-variant-numeric: tabular-nums; line-height: 1;
+      text-shadow: 0 0 40px rgba(239,68,68,.4);
+    }
+    .exrate-unit  { font-size: 2.6rem; font-weight: 700; color: #f87171; margin-right: 4px; vertical-align: baseline; }
+    .exrate-chg   { font-size: 1.55rem; font-weight: 700; margin-top: 8px; }
+    .exrate-chg.up   { color: #f87171; }
+    .exrate-chg.down { color: #60a5fa; }
+    .exrate-chg.flat { color: #64748b; }
+    .exrate-time  { font-size: 1.05rem; color: #334155; margin-top: 5px; }
+
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.25);
+      border-radius: 99px; padding: 5px 14px;
+      font-size: 1.1rem; font-weight: 600; color: #34d399; margin-top: 8px;
+    }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #10b981;
+      animation: pulse 2s ease-in-out infinite; flex-shrink: 0;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+
+    /* ═══ 날씨 섹션 ═══ */
+    .weather-section {
+      flex: 1;
+      padding: 0 68px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: relative; z-index: 1;
+    }
+
+    .section-label {
+      font-size: 1.5rem; font-weight: 700; color: #cbd5e1;
+      letter-spacing: .14em; text-transform: uppercase; margin-bottom: 14px;
+    }
+
+    .tbl-head {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.6fr;
+      padding: 0 40px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+    .tbl-head span { font-size: 1.35rem; font-weight: 700; color: #94a3b8; letter-spacing: .07em; }
+    .tbl-head span:nth-child(2),
+    .tbl-head span:nth-child(3) { text-align: center; }
+    .tbl-head span:last-child    { text-align: right; }
+
+    .city-rows {
+      display: flex; flex-direction: column;
+      gap: 0;
+      flex: 1;
+      justify-content: space-between; /* 6개 행이 남은 공간을 균등 배분 */
+    }
+
+    .city-card {
+      background: rgba(30,41,59,.7);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 18px;
+      padding: 0 40px;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.6fr;
+      align-items: center;
+      flex: 1;                 /* 각 카드가 동일 높이로 늘어남 */
+      margin-bottom: 12px;
+    }
+    .city-card:last-child { margin-bottom: 0; }
+    .city-card.highlight {
+      background: rgba(220,38,38,.09);
+      border-color: rgba(220,38,38,.25);
+    }
+
+    .city-info  { display: flex; align-items: center; gap: 18px; }
+
+    .flag-wrap {
+      width: 72px; height: 50px;
+      border-radius: 9px; overflow: hidden; flex-shrink: 0;
+      background: #1e293b;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,.07);
+    }
+    .flag-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .flag-emoji    { font-size: 2.6rem; display: none; }
+
+    .city-name  { font-size: 2.3rem; font-weight: 700; color: #f1f5f9; }
+
+    .icon-cell  { display: flex; justify-content: center; align-items: center; }
+    .icon-cell svg { width: 48px; height: 48px; }
+
+    .temp-cell  { display: flex; justify-content: center; align-items: baseline; gap: 2px; }
+    .temp-num   { font-size: 2.7rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .temp-num.hot  { color: #f87171; }
+    .temp-num.warm { color: #fb923c; }
+    .temp-num.cool { color: #60a5fa; }
+    .temp-num.cold { color: #a5b4fc; }
+    .temp-num.na   { color: #475569; }
+    .temp-unit  { font-size: 1.6rem; font-weight: 500; color: #64748b; }
+
+    .time-cell  { text-align: right; font-size: 2.7rem; font-weight: 700; color: #e2e8f0; font-variant-numeric: tabular-nums; }
+    .time-ampm  { font-size: 1.15rem; font-weight: 500; color: #64748b; margin-left: 4px; }
+
+    /* ═══ 푸터 ═══ */
+    .footer {
+      flex-shrink: 0;
+      padding: 16px 68px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: relative; z-index: 1;
+    }
+    .footer-live { display: flex; align-items: center; gap: 9px; }
+    .footer-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 2s ease-in-out infinite; }
+    .footer-live-txt { font-size: 1.1rem; color: #64748b; }
+    .footer-note     { font-size: 1.1rem; color: #475569; }
+  </style>
+</head>
+<body>
+<div class="screen">
+  <div class="deco deco-1"></div>
+  <div class="deco deco-2"></div>
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo-area">
+        <div class="logo-bar"></div>
+        <div>
+          <div class="logo-text">S-TECH</div>
+          <div class="logo-sub">㈜에스테크</div>
+        </div>
+      </div>
+      <div class="datetime-area">
+        <div class="dt-date" id="koDate">—</div>
+        <div class="dt-time" id="koTime">--:--:--</div>
+      </div>
+    </div>
+
+    <div class="exrate-card">
+      <div class="exrate-left">
+        <div class="exrate-flag">🇺🇸</div>
+        <div>
+          <div class="exrate-currency">USD</div>
+          <div class="exrate-pair">미국 달러 → 원화 KRW</div>
+        </div>
+      </div>
+      <div class="exrate-right">
+        <div><span class="exrate-unit">₩</span><span class="exrate-value" id="rateVal">——</span></div>
+        <div class="exrate-chg flat" id="rateChg">환율 불러오는 중…</div>
+        <div class="exrate-time"     id="rateTime">—</div>
+        <div><span class="live-badge"><span class="live-dot"></span>LIVE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 날씨 섹션 -->
+  <div class="weather-section">
+    <div class="section-label">현지 날씨 &amp; 시간</div>
+    <div class="tbl-head">
+      <span>국가 / 도시</span>
+      <span>날씨</span>
+      <span>기온</span>
+      <span>현지 시간</span>
+    </div>
+    <div class="city-rows" id="cityRows"></div>
+  </div>
+
+  <!-- 푸터 -->
+  <div class="footer">
+    <div class="footer-live">
+      <div class="footer-live-dot"></div>
+      <div class="footer-live-txt">실시간 업데이트 중</div>
+    </div>
+    <div class="footer-note">환율·날씨 정보는 참고용입니다</div>
+  </div>
+</div>
+
+<script>
+/* ── 뷰포트 스케일 자동 조정 ── */
+function fitScreen() {
+  const scaleX = window.innerWidth  / 1080;
+  const scaleY = window.innerHeight / 1920;
+  const scale  = Math.min(scaleX, scaleY);
+  document.body.style.transform = `scale(${scale})`;
+  document.body.style.width  = '1080px';
+  document.body.style.height = '1920px';
+  /* 스케일 후 여백 센터링 */
+  const offX = (window.innerWidth  - 1080 * scale) / 2;
+  const offY = (window.innerHeight - 1920 * scale) / 2;
+  document.body.style.marginLeft = offX + 'px';
+  document.body.style.marginTop  = offY + 'px';
+}
+fitScreen();
+window.addEventListener('resize', fitScreen);
+
+/* ── 도시 목록 (한국 최상단) ── */
+const CITIES = [
+  { id:'korea',    name:'한국',    emoji:'🇰🇷', img:'https://exc-web.vercel.app/_next/image?url=%2Fkorea.png&w=256&q=75',   tz:'Asia/Seoul',      lat:37.5665, lon:126.9780, highlight:true },
+  { id:'shanghai', name:'상해',    emoji:'🇨🇳', img:'https://exc-web.vercel.app/_next/image?url=%2Fshanghai.png&w=256&q=75', tz:'Asia/Shanghai',   lat:31.2304, lon:121.4737 },
+  { id:'taiyuan',  name:'타이위안', emoji:'🇨🇳', img:'https://exc-web.vercel.app/_next/image?url=%2Ftaiyuan.png&w=256&q=75', tz:'Asia/Shanghai',   lat:37.8706, lon:112.5489 },
+  { id:'taiwan',   name:'대만',    emoji:'🇹🇼', img:'https://exc-web.vercel.app/_next/image?url=%2Ftaiwan.png&w=256&q=75',  tz:'Asia/Taipei',     lat:25.0330, lon:121.5654 },
+  { id:'texas',    name:'텍사스',  emoji:'🇺🇸', img:'https://exc-web.vercel.app/_next/image?url=%2Ftexas.png&w=256&q=75',   tz:'America/Chicago', lat:31.9686, lon:-99.9018 },
+  { id:'dallas',   name:'댈러스',  emoji:'🇺🇸', img:'https://exc-web.vercel.app/_next/image?url=%2Fdallas.png&w=256&q=75',  tz:'America/Chicago', lat:32.7767, lon:-96.7970 },
+];
+
+/* ── 날씨 아이콘 SVG ── */
+const I = {
+  sun:   `<svg viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+  moon:  `<svg viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>`,
+  cloud: `<svg viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`,
+  rain:  `<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6M8 14v6M12 16v6"/></svg>`,
+  snow:  `<svg viewBox="0 0 24 24" fill="none" stroke="#bfdbfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4M4 8l4 4-4 4M20 8l-4 4 4 4M4 16l4-4-4-4"/></svg>`,
+  storm: `<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="m13 12-3 5h4l-3 5"/></svg>`,
+  fog:   `<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h3m4 0h9M3 10h11m4 0h1M1 15h11m4 0h3M3 20h7m4 0h9"/></svg>`,
+  na:    `<svg viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 5.12 2.12c0 2-3 3-3 3M12 17h.01"/></svg>`,
+};
+function getIcon(wmo, isDay) {
+  if (wmo == null) return I.na;
+  if (wmo === 0)   return isDay ? I.sun : I.moon;
+  if (wmo <= 3)    return I.cloud;
+  if (wmo <= 48)   return I.fog;
+  if (wmo <= 67)   return I.rain;
+  if (wmo <= 77)   return I.snow;
+  if (wmo <= 82)   return I.rain;
+  if (wmo <= 86)   return I.snow;
+  if (wmo <= 99)   return I.storm;
+  return I.na;
+}
+function tempClass(t) {
+  if (t == null) return 'na';
+  if (t >= 30) return 'hot';
+  if (t >= 20) return 'warm';
+  if (t >= 10) return 'cool';
+  return 'cold';
+}
+
+const wx = {};
+CITIES.forEach(c => { wx[c.id] = { temp:null, wmo:null, isDay:1 }; });
+
+function renderCities() {
+  const now = new Date();
+  document.getElementById('cityRows').innerHTML = CITIES.map(city => {
+    const w = wx[city.id];
+    const timeStr  = now.toLocaleTimeString('ko-KR', { timeZone:city.tz, hour:'2-digit', minute:'2-digit', hour12:false });
+    const localStr = now.toLocaleString('ko-KR', { timeZone:city.tz, hour:'numeric', hour12:true });
+    const ampm     = localStr.startsWith('오전') ? 'AM' : localStr.startsWith('오후') ? 'PM' : '';
+    const tempTxt  = w.temp != null ? Math.round(w.temp) : '--';
+    const tc       = tempClass(w.temp);
+    const hl       = city.highlight ? ' highlight' : '';
+    return `
+      <div class="city-card${hl}">
+        <div class="city-info">
+          <div class="flag-wrap">
+            <img src="${city.img}" alt="${city.emoji}"
+                 onerror="this.parentElement.innerHTML='<span class=flag-emoji>${city.emoji}</span>'"/>
+          </div>
+          <span class="city-name">${city.name}</span>
+        </div>
+        <div class="icon-cell">${getIcon(w.wmo, w.isDay)}</div>
+        <div class="temp-cell">
+          <span class="temp-num ${tc}">${tempTxt}</span>
+          <span class="temp-unit">°C</span>
+        </div>
+        <div class="time-cell">${timeStr}<span class="time-ampm">${ampm}</span></div>
+      </div>`;
+  }).join('');
+}
+
+const WD = ['일','월','화','수','목','금','토'];
+function updateClock() {
+  const now      = new Date();
+  const localNow = new Date(now.toLocaleString('en-US', { timeZone:'Asia/Seoul' }));
+  const ymd = now.toLocaleDateString('ko-KR', { timeZone:'Asia/Seoul', year:'numeric', month:'long', day:'numeric' });
+  const hms = now.toLocaleTimeString('ko-KR', { timeZone:'Asia/Seoul', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  document.getElementById('koDate').textContent = `${ymd} (${WD[localNow.getDay()]})`;
+  document.getElementById('koTime').textContent = hms;
+}
+
+let prevRate = null;
+async function fetchRate() {
+  let rate = null;
+  try {
+    const r = await fetch('https://api.exchangerate-api.com/v4/latest/USD', { cache:'no-store' });
+    if (r.ok) { const d = await r.json(); rate = d.rates?.KRW; }
+  } catch(_) {}
+  if (!rate) {
+    try {
+      const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=KRW', { cache:'no-store' });
+      if (r.ok) { const d = await r.json(); rate = d.rates?.KRW; }
+    } catch(_) {}
+  }
+  if (!rate) return;
+  document.getElementById('rateVal').textContent = Math.round(rate).toLocaleString('ko-KR');
+  const el = document.getElementById('rateChg');
+  if (prevRate !== null) {
+    const diff = rate - prevRate;
+    if (Math.abs(diff) < 0.3)  { el.textContent = '전일 대비 변동 없음'; el.className = 'exrate-chg flat'; }
+    else if (diff > 0)          { el.textContent = `▲ ${diff.toFixed(2)}원 상승`; el.className = 'exrate-chg up'; }
+    else                        { el.textContent = `▼ ${Math.abs(diff).toFixed(2)}원 하락`; el.className = 'exrate-chg down'; }
+  } else { el.textContent = 'USD 기준 실시간 매매 환율'; el.className = 'exrate-chg flat'; }
+  prevRate = rate;
+  const t = new Date().toLocaleTimeString('ko-KR', { timeZone:'Asia/Seoul', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  document.getElementById('rateTime').textContent = '최종 갱신 ' + t;
+}
+
+async function fetchWeather() {
+  await Promise.allSettled(CITIES.map(async city => {
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weathercode,is_day&timezone=auto`;
+      const r   = await fetch(url, { cache:'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      wx[city.id] = { temp:d.current.temperature_2m, wmo:d.current.weathercode, isDay:d.current.is_day };
+    } catch(_) {}
+  }));
+  renderCities();
+}
+
+updateClock();
+renderCities();
+setInterval(() => { updateClock(); renderCities(); }, 1000);
+fetchRate();
+fetchWeather();
+setInterval(fetchRate,    3 * 60 * 1000);
+setInterval(fetchWeather, 10 * 60 * 1000);
+</script>
+</body>
+</html>
